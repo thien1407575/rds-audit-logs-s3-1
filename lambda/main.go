@@ -2,19 +2,22 @@ package main
 
 import (
 	"fmt"
-	"github.com/aws/aws-lambda-go/lambda"
+	"time"
+
+	// "github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/rds"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 
-	"github.com/kelseyhightower/envconfig"
 	"rdsauditlogss3/internal/database"
 	"rdsauditlogss3/internal/logcollector"
 	"rdsauditlogss3/internal/parser"
 	"rdsauditlogss3/internal/processor"
 	"rdsauditlogss3/internal/s3writer"
+
+	"github.com/kelseyhightower/envconfig"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -26,8 +29,8 @@ type HandlerConfig struct {
 	DynamoDbTableName     string `envconfig:"DYNAMODB_TABLE_NAME" required:"true" desc:"DynamoDb table name"`
 	AwsRegion             string `envconfig:"AWS_REGION" required:"true" desc:"AWS region"`
 	Debug                 bool   `envconfig:"DEBUG" required:"true" desc:"Enable debug mode."`
-	LogPrefix             string   `envconfig:"LogPrefix" required:"true" desc:"rds log file prefix."`
-	FolderS3              string   `envconfig:"FolderS3" required:"true" desc:"s3 folder saved log."`
+	LogPrefix             string `envconfig:"LogPrefix" required:"true" desc:"rds log file prefix."`
+	FolderS3              string `envconfig:"FolderS3" required:"true" desc:"s3 folder saved log."`
 }
 
 type lambdaHandler struct {
@@ -69,8 +72,11 @@ func main() {
 		Region: aws.String(c.AwsRegion),
 	}
 
-	sess := session.New(sessionConfig)
-
+	sess, err := session.NewSession(sessionConfig)
+	// AWS_ROLE_ARN := os.Getenv("AWS_ROLE_ARN")
+	// if AWS_ROLE_ARN !="" {
+	// 	creds := stscreds.NewCredentials(sess, "myRoleArn")
+	// }
 	// Dev session
 	// sess, err := session.NewSessionWithOptions(session.Options{
 	// 	Profile: "605272924796_wl_stag_infraops_4h_permset",
@@ -104,7 +110,17 @@ func main() {
 			c.RdsInstanceIdentifier,
 		),
 	}
+	cond := true
+	for cond {
+		select {
+		case <-time.After(30 * time.Second):
+			lh.Handler()
+			fmt.Println("End proccess!")
+		}
+
+	}
+
 	// dev main
 	// lh.Handler()
-	lambda.Start(lh.Handler)
+	// lambda.Start(lh.Handler)
 }

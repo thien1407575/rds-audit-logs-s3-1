@@ -152,3 +152,5 @@ git push origin vx.x.x
 ```
 
 A new release in Github will automatically be created and the code will be published to the AWS Serverless Application Repository
+## Build
+GOOS=linux CGO_ENABLED=0 go build -o ./main 
