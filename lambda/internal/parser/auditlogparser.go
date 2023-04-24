@@ -5,9 +5,9 @@ import (
 	"bytes"
 	"io"
 	"rdsauditlogss3/internal/entity"
+	"regexp"
 	"strconv"
 	"strings"
-	"regexp"
 	"time"
 )
 
@@ -18,7 +18,7 @@ func NewAuditLogParser() *AuditLogParser {
 	return &AuditLogParser{}
 }
 
-func (p *AuditLogParser) ParseEntries(data io.Reader, logFileTimestamp int64) ([]*entity.LogEntry, error) {
+func (p *AuditLogParser) ParseEntries(data io.Reader, logFileTimestamp int64, CheckpointTimestammp int64) ([]*entity.LogEntry, error) {
 	var entries []*entity.LogEntry
 	var currentEntry *entity.LogEntry
 
@@ -51,7 +51,9 @@ func (p *AuditLogParser) ParseEntries(data io.Reader, logFileTimestamp int64) ([
 			}
 			ts= time.Unix(intTime, 0)
 		}
-
+		if ts.UnixNano()/1000000<CheckpointTimestammp{
+			continue
+		}
 		if err != nil  && currentEntry == nil {
 			continue
 		}
@@ -67,9 +69,7 @@ func (p *AuditLogParser) ParseEntries(data io.Reader, logFileTimestamp int64) ([
 		}else{
 			newTS = currentEntry.Timestamp
 		}
-
 		
-
 		if currentEntry != nil && currentEntry.Timestamp != newTS {
 			entries = append(entries, currentEntry)
 			currentEntry = nil

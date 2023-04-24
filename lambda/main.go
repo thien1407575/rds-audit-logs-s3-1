@@ -50,42 +50,38 @@ func (lh *lambdaHandler) Handler() error {
 func main() {
 	var c HandlerConfig
 	// Dev env
-	// c.AwsRegion = "us-east-1"
-	// c.DynamoDbTableName = "rds-cache-timestamp"
-	// c.S3BucketName = "cf-templates-6w08wj2iqgqp-us-east-1"
-	// c.RdsInstanceIdentifier = "mothership-instance-1"
-	// c.FolderS3 = "audit_log"
-	// c.LogPrefix = "audit/audit"
-	// c.Debug = true
+	c.AwsRegion = "us-east-1"
+	c.DynamoDbTableName = "rds-writer-ts"
+	c.S3BucketName = "belletorus-security-database-logging-backup"
+	c.RdsInstanceIdentifier = "mothership-instance-1-us-east-1c"
+	c.FolderS3 = "audit_log"
+	c.LogPrefix = "audit/audit"
+	c.Debug = true
 
 	err := envconfig.Process("", &c)
-	if err != nil {
-		log.WithError(err).Fatal("Error parsing configuration")
-	}
+	// if err != nil {
+	// 	log.WithError(err).Fatal("Error parsing configuration")
+	// }
 
-	if c.Debug {
-		log.SetLevel(log.DebugLevel)
-	}
+	// if c.Debug {
+	// 	log.SetLevel(log.DebugLevel)
+	// }
 
 	// Initialize AWS session
-	sessionConfig := &aws.Config{
-		Region: aws.String(c.AwsRegion),
-	}
+	// sessionConfig := &aws.Config{
+	// 	Region: aws.String(c.AwsRegion),
+	// }
+	// sess, err := session.NewSession(sessionConfig)
 
-	sess, err := session.NewSession(sessionConfig)
-	// AWS_ROLE_ARN := os.Getenv("AWS_ROLE_ARN")
-	// if AWS_ROLE_ARN !="" {
-	// 	creds := stscreds.NewCredentials(sess, "myRoleArn")
-	// }
 	// Dev session
-	// sess, err := session.NewSessionWithOptions(session.Options{
-	// 	Profile: "605272924796_wl_stag_infraops_4h_permset",
-	// 	Config:  aws.Config{Region: aws.String("us-east-1")},
-	// 	SharedConfigState: session.SharedConfigEnable,
-	// })
-	// if err!= nil {
-	// 	fmt.Println(err)
-	// }
+	sess, err := session.NewSessionWithOptions(session.Options{
+		Profile: "461285515796_wl_prod_infraops_4h_permset",
+		Config:  aws.Config{Region: aws.String("us-east-1")},
+		SharedConfigState: session.SharedConfigEnable,
+	})
+	if err!= nil {
+		fmt.Println(err)
+	}
 	// Create & start lambda handler
 	lh := &lambdaHandler{
 		processor: processor.NewProcessor(
@@ -108,12 +104,12 @@ func main() {
 			),
 			parser.NewAuditLogParser(),
 			c.RdsInstanceIdentifier,
+			c.FolderS3,
 		),
 	}
-	cond := true
-	for cond {
+	for  {
 		select {
-		case <-time.After(30 * time.Second):
+		case <-time.After(5 * time.Second):
 			lh.Handler()
 			fmt.Println("End proccess!")
 		}

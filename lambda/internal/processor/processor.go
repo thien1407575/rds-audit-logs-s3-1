@@ -3,12 +3,13 @@ package processor
 import (
 	"fmt"
 
-	"github.com/sirupsen/logrus"
 	"rdsauditlogss3/internal/database"
 	"rdsauditlogss3/internal/entity"
 	"rdsauditlogss3/internal/logcollector"
 	"rdsauditlogss3/internal/parser"
 	"rdsauditlogss3/internal/s3writer"
+
+	"github.com/sirupsen/logrus"
 )
 
 type Processor struct {
@@ -17,15 +18,17 @@ type Processor struct {
 	S3Writer              s3writer.Writer
 	Parser                parser.Parser
 	RdsInstanceIdentifier string
+	Folder                string
 }
 
-func NewProcessor(db database.Database, lc logcollector.LogCollector, w s3writer.Writer, p parser.Parser, rdsInstanceIdentifier string) *Processor {
+func NewProcessor(db database.Database, lc logcollector.LogCollector, w s3writer.Writer, p parser.Parser, rdsInstanceIdentifier string, folder string) *Processor {
 	return &Processor{
 		database:              db,
 		logcollector:          lc,
 		S3Writer:              w,
 		Parser:                p,
 		RdsInstanceIdentifier: rdsInstanceIdentifier,
+		Folder:                folder,
 	}
 }
 
@@ -37,15 +40,17 @@ func (p *Processor) Process() error {
 	}
 
 	// Get current checkpoint from database
-	id := fmt.Sprintf("%s:%s", p.RdsInstanceIdentifier, "audit")
+	id := fmt.Sprintf("%s:%s", p.RdsInstanceIdentifier, p.Folder)
 	checkpointRecord, err := p.database.GetCheckpoint(id)
 	if err != nil {
 		return fmt.Errorf("could not get marker: %v", err)
 	}
 
 	currentLogFileTimestamp := int64(0)
+	checkpointTS := int64(0)
 	if checkpointRecord != nil {
 		currentLogFileTimestamp = checkpointRecord.LogFileTimestamp
+		checkpointTS = checkpointRecord.LogFileTimestamp
 	}
 
 	processedLogFiles := 0
@@ -59,13 +64,13 @@ func (p *Processor) Process() error {
 			// No more logs available
 			break
 		}
-		
+
 		// d1 := []byte(logLines[0])
 		// err = ioutil.WriteFile(fmt.Sprintf("/tmp/%d", logFileTimestamp), d1, 0644)
 
 		currentLogFileTimestamp = logFileTimestamp
 
-		logEntries, err := p.Parser.ParseEntries(logLines, currentLogFileTimestamp)
+		logEntries, err := p.Parser.ParseEntries(logLines, currentLogFileTimestamp, checkpointTS)
 		if err != nil {
 			logrus.WithFields(logrus.Fields{"err": err}).Warn("Could not parse entries")
 			return fmt.Errorf("could not parse entries: %v", err)
@@ -73,7 +78,7 @@ func (p *Processor) Process() error {
 
 		for _, entry := range logEntries {
 			processedLogFiles += 1
-			if entry==nil {
+			if entry == nil {
 				continue
 			}
 			err := p.S3Writer.WriteLogEntry(*entry)

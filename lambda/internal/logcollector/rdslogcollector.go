@@ -247,6 +247,11 @@ func findLogFileNewerThanTimestamp(logFiles []LogFile, finishedLogFileTimestamp 
 
 	for _, l := range logFiles {
 		if l.LastWritten > finishedLogFileTimestamp && l.IsRotatedFile() {
+			// if l.LogFileName=="audit/audit.log.2.2023-04-23-23-10.10"{
+			// 	println(l.LastWrittenTime.GoString())
+			// }else{
+			// 	continue
+			// }
 			return &l, nil
 		}
 	}

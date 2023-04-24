@@ -1,10 +1,10 @@
 package parser
 
 import (
-	"rdsauditlogss3/internal/entity"
 	"io"
+	"rdsauditlogss3/internal/entity"
 )
 
 type Parser interface {
-	ParseEntries(data io.Reader, logFileTimestamp int64) ([]*entity.LogEntry, error)
+	ParseEntries(data io.Reader, logFileTimestamp int64, CheckpointTimestammp int64) ([]*entity.LogEntry, error)
 }
